@@ -1,0 +1,34 @@
+---
+title: "Conjoncture 1"
+author: "Antton Branger"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+rm(list = ls())
+```
+
+Chargement des packages 
+```{r, include=FALSE}
+library(tidyverse)
+library(eurostat)
+```
+
+
+Importation des données
+```{r}
+dataset_id <- "namq_10_gdp"
+df <- get_eurostat(dataset_id)
+df_clean <- df %>% 
+  filter(geo == "PT",
+         na_item == "B1GQ",
+         unit == "CLV20_MEUR",
+         s_adj == "SCA")
+```
+
+

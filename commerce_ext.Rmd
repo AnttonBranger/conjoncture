@@ -1,0 +1,28 @@
+---
+title: "Commerce extérieur"
+output: html_document
+date: "`r Sys.Date()`"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+rm(list = ls())
+```
+
+Chargement des packages 
+```{r, include=FALSE}
+library(tidyverse)
+library(eurostat)
+```
+
+
+Importation des données
+```{r}
+dataset_id <- "ei_eteu27_2020_m"
+df <- get_eurostat(dataset_id)
+df_clean <- df %>% 
+  filter(geo == "PT")
+```

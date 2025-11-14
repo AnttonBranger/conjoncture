@@ -1,0 +1,27 @@
+---
+title: "FBCF"
+output: html_document
+date: "`r Sys.Date()`"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+rm(list = ls())
+```
+
+Chargement des packages 
+```{r, include=FALSE}
+library(tidyverse)
+library(eurostat)
+```
+
+
+Importation des données
+```{r}
+dataset_id <- 
+df <- get_eurostat(dataset_id)
+df_clean <- label_eurostat(df)
+```
