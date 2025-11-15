@@ -17,6 +17,8 @@ Chargement des packages
 ```{r, include=FALSE}
 library(tidyverse)
 library(eurostat)
+library(ggthemes)
+library(mFilter)
 ```
 
 
@@ -28,7 +30,74 @@ df_clean <- df %>%
   filter(geo == "PT",
          na_item == "B1GQ",
          unit == "CLV20_MEUR",
-         s_adj == "SCA")
+         s_adj == "SCA") %>% 
+  mutate(potentiel = hpfilter(values, freq = 1600)$trend,
+         output_gap = 100 * (values - potentiel) / potentiel,
+         pct_gdp_growth = (values / dplyr::lag(values, 4) - 1) * 100)
 ```
 
+
+Graphique 
+```{r}
+ggplot(df_clean, aes(x = TIME_PERIOD)) +
+  geom_line(aes(y = values), size = 1) +
+  geom_line(aes(y = potentiel), col = "red", size = 0.5) +
+  labs(
+    title = "Évolution du PIB en volume et PIB potentiel",
+    x = "Année",
+    y = "PIB (millions d’euros)"
+  ) +
+  theme_minimal() +  
+  theme(
+    plot.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+```
+
+Output gap 
+```{r}
+ggplot(df_clean, aes(x = TIME_PERIOD, y = output_gap)) +
+  geom_hline(yintercept = 0, col = "red") +
+  geom_line() +
+  labs(
+    title = "Output Gap — France",
+    subtitle = "Écart de production en % du PIB potentiel",
+    x = "Année",
+    y = "Output gap (%)"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold")
+  )
+```
+
+```{r}
+ggplot(df_clean %>% filter(format(TIME_PERIOD, "%Y") >= 2008), aes(x = TIME_PERIOD)) +
+  
+  # Barres Output Gap
+  geom_col(aes(y = output_gap, fill = output_gap > 0)) +
+  scale_fill_manual(values = c("TRUE" = "#72B22F", "FALSE" = "#E67E22"), guide = "none") +
+  
+  # Ligne croissance du PIB
+  geom_line(aes(y = pct_gdp_growth * 1), linewidth = 1.1) +
+  
+  # Deux axes Y
+  scale_y_continuous(
+    name = "Output Gap (%)",
+    sec.axis = sec_axis(~ ., name = "Taux de croissance du PIB réel (%)")
+  ) +
+  
+  # Titres
+  labs(
+    title = "Taux de croissance du PIB réel et Output Gap",
+    subtitle = "Données trimestrielles",
+    x = "Année"
+  ) +
+  
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    axis.title.y.right = element_text(color = "black")
+  )
+```
 
