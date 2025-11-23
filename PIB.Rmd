@@ -25,8 +25,8 @@ library(mFilter)
 Importation des données
 ```{r}
 dataset_id <- "namq_10_gdp"
-df <- get_eurostat(dataset_id)
-df_clean <- df %>% 
+pib <- get_eurostat(dataset_id)
+pib_clean <- pib %>% 
   filter(geo == "PT",
          na_item == "B1GQ",
          unit == "CLV20_MEUR",
@@ -39,7 +39,7 @@ df_clean <- df %>%
 
 Graphique 
 ```{r}
-ggplot(df_clean, aes(x = TIME_PERIOD)) +
+ggplot(pib_clean, aes(x = TIME_PERIOD)) +
   geom_line(aes(y = values), size = 1) +
   geom_line(aes(y = potentiel), col = "red", size = 0.5) +
   labs(
@@ -56,7 +56,7 @@ ggplot(df_clean, aes(x = TIME_PERIOD)) +
 
 Output gap 
 ```{r}
-ggplot(df_clean, aes(x = TIME_PERIOD, y = output_gap)) +
+ggplot(pib_clean, aes(x = TIME_PERIOD, y = output_gap)) +
   geom_hline(yintercept = 0, col = "red") +
   geom_line() +
   labs(
@@ -72,7 +72,7 @@ ggplot(df_clean, aes(x = TIME_PERIOD, y = output_gap)) +
 ```
 
 ```{r}
-ggplot(df_clean %>% filter(format(TIME_PERIOD, "%Y") >= 2008), aes(x = TIME_PERIOD)) +
+ggplot(pib_clean %>% filter(format(TIME_PERIOD, "%Y") >= 2008), aes(x = TIME_PERIOD)) +
   
   # Barres Output Gap
   geom_col(aes(y = output_gap, fill = output_gap > 0)) +
@@ -99,5 +99,131 @@ ggplot(df_clean %>% filter(format(TIME_PERIOD, "%Y") >= 2008), aes(x = TIME_PERI
     plot.title = element_text(face = "bold", size = 14),
     axis.title.y.right = element_text(color = "black")
   )
+```
+
+Décomposition du PIB
+```{r}
+composantes_corrigées <- c(
+  "B1GQ",      # PIB volume
+  "P31_S14",   # Consommation des ménages (Utilisation du code exact trouvé P31_S14)
+  "P3_S13",    # Consommation des administrations publiques (G) (Code trouvé P3_S13)
+  "P5G",       # Formation brute de capital (I)
+  "P6",        # Exportations (X)
+  "P7"         # Importations (M)
+)
+
+# --- 1. Récupération et préparation des données Eurostat ---
+
+pib_decomp_final <- pib %>%
+  mutate(time = as.Date(TIME_PERIOD)) %>% 
+  filter(
+    geo == "PT",
+    unit == "CLV20_MEUR",
+    s_adj == "SCA",
+    na_item %in% composantes_corrigées, # Utilisation de la liste corrigée
+    year(time) %in% c(2023, 2024, 2025) 
+  ) %>%
+  select(time, na_item, values) %>%
+  pivot_wider(
+    names_from = na_item,
+    values_from = values
+  ) %>%
+  arrange(time) %>% 
+  rename(
+    "PIB (volume)" = B1GQ,
+    "Consommation Ménages" = P31_S14, # Renommage en CFm
+    "Consommation Gouv (G)" = P3_S13, # Renommage en G
+    "FBCF" = P5G,
+    "Exportations" = P6,
+    "Importations" = P7
+  )
+```
+
+```{r}
+calculer_contribution <- function(valeur_composante, valeur_pib, type = "positif") {
+  g_X <- (valeur_composante / lag(valeur_composante) - 1)
+  poids_X_t_moins_1 <- lag(valeur_composante) / lag(valeur_pib)
+  contribution <- poids_X_t_moins_1 * g_X
+  if (type == "negatif") {
+    contribution <- -contribution
+  }
+  return(contribution * 100)
+}
+
+pib_final_calcul <- pib_decomp_final %>%
+  arrange(time) %>%
+  mutate(
+    PIB_Taux_Croissance = (`PIB (volume)` / lag(`PIB (volume)`) - 1) * 100,
+    
+    # Contributions individuelles (maintenant correctement ventilées)
+    Contrib_CFm = calculer_contribution(`Consommation Ménages`, `PIB (volume)`, type = "positif"),
+    Contrib_G = calculer_contribution(`Consommation Gouv (G)`, `PIB (volume)`, type = "positif"),
+    Contrib_FBCF = calculer_contribution(FBCF, `PIB (volume)`, type = "positif"),
+    
+    # Agrégats
+    Contrib_X_IM = calculer_contribution(Exportations, `PIB (volume)`, type = "positif") + 
+      calculer_contribution(Importations, `PIB (volume)`, type = "negatif"),
+    
+    # Demande intérieure HORS STOCKS (incluant CFm + G + FBCF)
+    Contrib_DIHS = Contrib_CFm + Contrib_G + Contrib_FBCF,
+    
+    # Contribution de la Variation des Stocks (Vs) par résidu
+    Contrib_Vs = PIB_Taux_Croissance - Contrib_DIHS - Contrib_X_IM
+  ) %>%
+  filter(year(time) %in% c(2024, 2025))
+```
+
+Affichage du tableau
+```{r}
+tableau_final_format_G <- pib_final_calcul %>%
+  select(
+    time,
+    `PIB_Taux_Croissance`,
+    Contrib_CFm,
+    Contrib_G, 
+    Contrib_FBCF,
+    Contrib_DIHS,
+    Contrib_Vs,
+    Contrib_X_IM
+  ) %>%
+  mutate(trimestre = format(as.yearqtr(time), format = "%YT%q")) %>%
+  select(-time) %>%
+  
+  pivot_longer(
+    cols = starts_with("PIB") | starts_with("Contrib"),
+    names_to = "Indicateur",
+    values_to = "Valeur"
+  ) %>%
+  pivot_wider(
+    names_from = trimestre,
+    values_from = Valeur
+  ) %>%
+  
+  # Renommage et ordre
+  mutate(Indicateur = case_when(
+    Indicateur == "PIB_Taux_Croissance" ~ "PIB",
+    Indicateur == "Contrib_CFm" ~ "Consommation Ménages (CFm)",
+    Indicateur == "Contrib_G" ~ "Consommation Gouv (G)",
+    Indicateur == "Contrib_FBCF" ~ "FBCF",
+    Indicateur == "Contrib_DIHS" ~ "Demande intérieure hors stocks",
+    Indicateur == "Contrib_Vs" ~ "Variation des stocks",
+    Indicateur == "Contrib_X_IM" ~ "Extérieur (X-IM)",
+    TRUE ~ Indicateur
+  )) %>%
+  
+  arrange(match(Indicateur, c(
+    "PIB", 
+    "Consommation Ménages (CFm)", 
+    "Consommation Gouv (G)",
+    "FBCF", 
+    "Demande intérieure hors stocks", 
+    "Variation des stocks", 
+    "Extérieur (X-IM)"
+  ))) %>%
+  
+  mutate(across(starts_with("20"), ~ format(round(., 1), nsmall = 1))) %>%
+  mutate(across(starts_with("20"), ~ replace_na(as.character(.x), "")))
+
+print(tableau_final_format_G)
 ```
 
