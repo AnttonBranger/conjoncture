@@ -1,0 +1,112 @@
+---
+title: "Marché du travail"
+author: "Antton Branger"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+rm(list = ls())
+```
+
+Chargement des packages
+```{r}
+library(tidyverse)
+library(eurostat)
+library(lubridate)
+library(janitor)
+library(ggthemes)
+library(mFilter)
+```
+
+# Taux de chômage
+
+```{r}
+id <- "une_rt_m"
+chomage <- get_eurostat(id)
+chomage_clean <- chomage %>% 
+  filter(geo == "PT", 
+         sex == "T",
+         s_adj == "SA",
+         freq == "M",
+         age == "TOTAL",
+         unit == "PC_ACT"
+         ) %>% 
+  mutate(Date = floor_date(TIME_PERIOD, "month"),
+         Taux_Chomage_SA = values) %>% 
+  filter(Date >= ymd("2023-01-01") & Date <= ymd("2025-12-01")) %>% 
+  select(Date, Taux_Chomage_SA)
+
+df_analyse <- chomage_clean %>%
+  mutate(
+    Var_pts_Chomage_MM1 = Taux_Chomage_SA - lag(Taux_Chomage_SA, n = 1L),
+    Var_pts_Chomage_MM12 = Taux_Chomage_SA - lag(Taux_Chomage_SA, n = 12L)
+  ) %>% 
+  filter(Date >= ymd("2024-01-01"))
+```
+
+Interprétation
+```{r}
+dernier_mois <- df_analyse %>% 
+  tail(1) 
+cat("\n========================================================================\n")
+cat("ANALYSE DU TAUX DE CHÔMAGE HARMONISÉ (PORTUGAL - SÉRIES DÉS.)\n")
+cat("========================================================================\n")
+
+cat("\nDERNIER DIAGNOSTIC DISPONIBLE (", format(dernier_mois$Date, "%B %Y"), ") :\n", sep="")
+cat("  - Taux de Chômage Harmonisé : ", round(dernier_mois$Taux_Chomage_SA, 1), " %\n", sep="")
+cat("  - Variation M/M-1 du Chômage : ", round(dernier_mois$Var_pts_Chomage_MM1, 2), " points de pourcentage\n", sep="")
+cat("  - Glissement Annuel (M/M-12) : ", round(dernier_mois$Var_pts_Chomage_MM12, 2), " points de pourcentage\n", sep="")
+
+cat("\nTABLEAU : ÉVOLUTION MENSUELLE DU TAUX DE CHÔMAGE (12 derniers mois):\n")
+print(df_analyse %>% 
+        select(Date, Taux_Chomage_SA, Var_pts_Chomage_MM1, Var_pts_Chomage_MM12) %>%
+        tail(12) %>%
+        mutate(across(where(is.numeric), ~round(.x, 2))), n=Inf)
+```
+Graphique
+```{r}
+df_analyse %>%
+  ggplot(aes(x = Date, y = Taux_Chomage_SA)) +
+  geom_line(color = "#0072B2", linewidth = 1.2) +
+  # Ligne horizontale à 7% (ou autre référence si connue pour le NAIRU)
+  # geom_hline(yintercept = 7, linetype = "dashed", color = "red") + 
+  labs(
+    title = "Taux de Chômage Harmonisé au Portugal (PT)",
+    subtitle = paste("Période :", format(ymd("2024-01-01"), "%b %Y"), "à", format(ymd("2024-12-01"), "%b %Y"), "(Séries Désaisonnalisées)"),
+    y = "Taux de Chômage (%)",
+    x = "Date"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+```
+
+# Postes vacants
+
+```{r}
+id <- "jvs_q_nace2"
+poste_vacants <- get_eurostat(id)
+```
+
+# Heures travaillées 
+
+```{r}
+id <- "ei_lmhr_m"
+heure_travail <- get_eurostat(id)
+```
+
+
+# Coût du travail
+
+```{r}
+id <- "teilm130"
+cout_travail <- get_eurostat(id)
+```
+

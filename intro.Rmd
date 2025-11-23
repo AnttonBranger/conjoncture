@@ -1,0 +1,72 @@
+---
+title: "Indicateur confiance"
+author: "Antton Branger"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+rm(list = ls())
+```
+
+Chargement des packages
+```{r}
+library(tidyverse)
+library(eurostat)
+library(lubridate)
+library(janitor)
+```
+
+Importation des données
+```{r}
+id <- "teibs020"
+df <- get_eurostat(id)
+df_clean <- df %>% 
+  filter(geo == "PT", 
+         freq == "M",
+         s_adj == "SA",
+         #indic %in% c("BS-ESI-I", "BS-CSM-I", "BS-ICS-I" )
+         ) %>% 
+  rename(Date = TIME_PERIOD) %>%
+  mutate(Date = floor_date(Date, "month")) %>%
+  filter(Date >= ymd("2024-01-01") & Date <= ymd("2025-12-01")) %>%
+  #select(Date, indic, values) %>%
+  mutate(
+      indic = case_match(
+        indic,
+        "BS-ESI-I" ~ "ESI Global",
+        "BS-CSM-I" ~ "Confiance Consommateurs",
+        "BS-ICS-I" ~ "Confiance Industrielle",
+        .default = as.character(indic)
+      )
+    )
+
+df_confiance_wide <- df_clean %>%
+  pivot_wider(names_from = indic, values_from = values) %>%
+  arrange(Date)
+
+df_analyse <- df_confiance_wide %>%
+  mutate(
+    across(
+      .cols = all_of(INDICATEURS_CIBLES %>% c("ESI Global")),
+      .fns = list(
+        var_mm1 = ~ .x - lag(.x, n = 1L),
+        var_mm12 = ~ .x - lag(.x, n = 12L)
+      ),
+      .names = "{.fn}_{.col}"
+    )
+  )
+```
+
+# Sentiment économique 
+
+
+# Confiance des consommateurs 
+
+
+# Confiance dans l'industrie
+

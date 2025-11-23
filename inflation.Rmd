@@ -1,0 +1,160 @@
+---
+title: "Prix, couts et déséquilibres"
+author: "Antton Branger"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+rm(list = ls())
+```
+
+Chargement des packages
+```{r}
+library(tidyverse)
+library(eurostat)
+library(lubridate)
+library(janitor)
+library(ggthemes)
+library(mFilter)
+```
+
+# Inflation 
+
+```{r}
+id_mensuel <- "prc_hicp_mmor"
+infl_mensuel <- get_eurostat(id_mensuel)
+id_anuel <- "prc_hicp_manr"
+infl_anuel <- get_eurostat(id_anuel)
+
+special_aggregates <- c(
+  "CP00", # Total
+  "AP",   # Inflation sous-jacente (Total hors aliments non transformés et énergie)
+  "NRG",  # Énergie
+  "FOOD", # Alimentation (général)
+  "SERV"  # Services
+)
+
+mensuel <- infl_mensuel %>%
+  select(-unit) %>% 
+  filter(geo == "PT", freq == "M",
+         str_detect(coicop, "^CP(0[1-9]|1[0-2])$") | coicop %in% special_aggregates) %>% 
+  rename(inflation_mensuelle = values) %>% 
+  select(-geo)
+
+annuel <- infl_anuel %>%
+  select(-unit) %>% 
+  filter(geo == "PT", freq == "M",
+         str_detect(coicop, "^CP(0[1-9]|1[0-2])$") | coicop %in% special_aggregates) %>% 
+  rename(inflation_annuelle = values) %>% 
+  select(-geo)
+
+
+inflation_complete <- inner_join(
+  annuel, 
+  mensuel, 
+  by = c("TIME_PERIOD", "coicop", "freq")) %>% 
+  filter(TIME_PERIOD >= ymd("2024-01-01"))
+```
+
+Inflation globale
+```{r}
+inflation_globale <- inflation_complete %>%
+  filter(coicop == "CP00") %>%
+  arrange(TIME_PERIOD)
+
+tail(inflation_globale, 1)
+```
+Graphique général
+```{r}
+ggplot(inflation_globale, aes(x = TIME_PERIOD, y = inflation_annuelle)) +
+  geom_line(color = "#0066cc", size = 1.2) +
+  geom_hline(yintercept = 2, linetype = "dashed", color = "red") + # Cible indicative de la BCE
+  geom_hline(yintercept = 0, color = "black") +
+  labs(
+    title = "Inflation Annuelle de l'IPCH au Portugal (PT)",
+    subtitle = "Taux de variation annuel (en %)",
+    x = "Date",
+    y = "Taux d'Inflation (%)"
+  ) +
+  theme_minimal() +
+  geom_point(data = tail(inflation_globale, 1), aes(x = TIME_PERIOD, y = inflation_annuelle), color = "red", size = 3)
+```
+
+Décomposition par aggrégats
+```{r}
+aggregats_decomposition <- c("CP00", "NRG", "SERV", "FOOD", "AP")
+data_decomposition <- inflation_complete %>%
+  filter(coicop %in% aggregats_decomposition) %>%
+  mutate(coicop = factor(coicop, levels = aggregats_decomposition))
+
+ggplot(data_decomposition, aes(x = TIME_PERIOD, y = inflation_annuelle, color = coicop)) +
+  geom_line(size = 1) +
+  labs(
+    title = "Décomposition de l'Inflation Annuelle au Portugal",
+    subtitle = "Comparaison des taux de croissance annuels par agrégat",
+    x = "Date",
+    y = "Taux d'Inflation (%)",
+    color = "Secteur"
+  ) +
+  scale_color_manual(
+    values = c("CP00" = "black", "NRG" = "red", "SERV" = "blue", "FOOD" = "darkgreen", "AP" = "purple"),
+    labels = c(
+      "CP00" = "Total IPCH",
+      "NRG" = "Énergie",
+      "SERV" = "Services",
+      "FOOD" = "Alimentation",
+      "AP" = "Inflation Sous-jacente (hors NRG & Alim. non-transf.)"
+    )
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
+# Prix à la production
+
+```{r}
+id <- "sts_inppd_m"
+ipp <- get_eurostat(id)
+
+agrégats_cles_ppi <- c(
+  "TOTAL",    # Prix de production total (Indice principal)
+  "MIG_ENER", # Agrégat énergie (le plus volatil)
+  "MIG_IND",  # Biens intermédiaires (souvent liés aux matières premières)
+  "MIG_CAP",  # Biens d'équipement
+  "MIG_CONS"  # Biens de consommation (total)
+)
+
+ipp_clean <- ipp %>% 
+  filter(geo == "PT", indic_bt == "V12400", nace_r2 %in% agrégats_cles_ppi) %>%
+  rename(taux_annuel_ppi = values, secteur_nace = nace_r2) %>%
+  mutate(time = as.Date(paste0(TIME_PERIOD, "-01"), format = "%Y-%m-%d")) %>%
+  arrange(time) %>%
+  select(time, secteur_nace, taux_annuel_ppi)
+```
+
+Indicateur global
+```{r}
+ppi_global_pt <- ipp_clean %>%
+  filter(secteur_nace == "TOTAL")
+tail(ppi_global_pt, 1)
+```
+
+# Compte courant
+
+```{r}
+id <- "ei_bpm6ca_m"
+compte_courant <- get_eurostat(id)
+```
+
+# Dette et déficit publique
+
+```{r}
+id <- "tipsgo"
+dette <- get_eurostat(id)
+```
+
