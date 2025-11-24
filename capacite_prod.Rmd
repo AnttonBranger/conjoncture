@@ -1,0 +1,36 @@
+---
+title: "Taux d'utilisation des capacités de production"
+output: html_document
+date: "`r Sys.Date()`"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+rm(list = ls())
+```
+
+Chargement des packages
+```{r}
+library(tidyverse)
+library(eurostat)
+library(lubridate)
+library(janitor)
+library(ggthemes)
+library(mFilter)
+```
+
+# Utilisation des capacités de production
+
+Importation des données 
+```{r}
+id <- "ei_bsin_q_r2"
+cp <- get_eurostat(id)
+cp_clean <- cp %>% 
+  filter(s_adj == "SA", 
+         geo == "PT",
+         indic == "BS-ICU-PC") %>% 
+  select(indic, TIME_PERIOD, values)
+```

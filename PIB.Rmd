@@ -17,8 +17,11 @@ Chargement des packages
 ```{r, include=FALSE}
 library(tidyverse)
 library(eurostat)
+library(lubridate)
+library(janitor)
 library(ggthemes)
 library(mFilter)
+library(zoo)
 ```
 
 
@@ -156,9 +159,11 @@ pib_final_calcul <- pib_decomp_final %>%
     PIB_Taux_Croissance = (`PIB (volume)` / lag(`PIB (volume)`) - 1) * 100,
     
     # Contributions individuelles (maintenant correctement ventilées)
-    Contrib_CFm = calculer_contribution(`Consommation Ménages`, `PIB (volume)`, type = "positif"),
-    Contrib_G = calculer_contribution(`Consommation Gouv (G)`, `PIB (volume)`, type = "positif"),
-    Contrib_FBCF = calculer_contribution(FBCF, `PIB (volume)`, type = "positif"),
+    Contrib_CFm = round(calculer_contribution(`Consommation Ménages`, `PIB (volume)`, type = "positif"),
+                        1),
+    Contrib_G = round(calculer_contribution(`Consommation Gouv (G)`, `PIB (volume)`, type = "positif"),
+                      1),
+    Contrib_FBCF = round(calculer_contribution(FBCF, `PIB (volume)`, type = "positif"), 1),
     
     # Agrégats
     Contrib_X_IM = calculer_contribution(Exportations, `PIB (volume)`, type = "positif") + 
@@ -226,4 +231,4 @@ tableau_final_format_G <- pib_final_calcul %>%
 
 print(tableau_final_format_G)
 ```
-
+Lors de l'exportation il faut mettre à 0 la variation des stocks pour 2024T3. 
