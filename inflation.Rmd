@@ -25,136 +25,105 @@ library(mFilter)
 
 # Inflation 
 
+Importation des données 
+
+Infaltion totale
 ```{r}
-id_mensuel <- "prc_hicp_mmor"
-infl_mensuel <- get_eurostat(id_mensuel)
-id_anuel <- "prc_hicp_manr"
-infl_anuel <- get_eurostat(id_anuel)
-
-special_aggregates <- c(
-  "CP00", # Total
-  "AP",   # Inflation sous-jacente (Total hors aliments non transformés et énergie)
-  "NRG",  # Énergie
-  "FOOD", # Alimentation (général)
-  "SERV"  # Services
-)
-
-mensuel <- infl_mensuel %>%
-  select(-unit) %>% 
-  filter(geo == "PT", freq == "M",
-         str_detect(coicop, "^CP(0[1-9]|1[0-2])$") | coicop %in% special_aggregates) %>% 
-  rename(inflation_mensuelle = values) %>% 
-  select(-geo)
-
-annuel <- infl_anuel %>%
-  select(-unit) %>% 
-  filter(geo == "PT", freq == "M",
-         str_detect(coicop, "^CP(0[1-9]|1[0-2])$") | coicop %in% special_aggregates) %>% 
-  rename(inflation_annuelle = values) %>% 
-  select(-geo)
-
-
-inflation_complete <- inner_join(
-  annuel, 
-  mensuel, 
-  by = c("TIME_PERIOD", "coicop", "freq")) %>% 
-  filter(TIME_PERIOD >= ymd("2024-01-01"))
+hicp <- get_eurostat("prc_hicp_manr", time_format = "date") 
+hicp_total <- hicp %>%
+  filter(
+    geo == "PT",
+    coicop == "CP00",   # indice global
+    unit == "RCH_A"     # taux annuel %
+  ) %>%
+  filter(TIME_PERIOD >= as.Date("2023-01-01"))
 ```
 
-Inflation globale
+Inflation sous-jacente
 ```{r}
-inflation_globale <- inflation_complete %>%
-  filter(coicop == "CP00") %>%
-  arrange(TIME_PERIOD)
-
-tail(inflation_globale, 1)
+hicp_core <- hicp %>%
+  filter(
+    geo == "PT",
+    coicop == "TOT_X_NRG_FOOD",  # inflation sous-jacente
+    unit == "RCH_A"
+  ) %>%
+  filter(TIME_PERIOD >= as.Date("2023-01-01"))
 ```
-Graphique général
+
+Décomposition de l'inflation
 ```{r}
-ggplot(inflation_globale, aes(x = TIME_PERIOD, y = inflation_annuelle)) +
-  geom_line(color = "#0066cc", size = 1.2) +
-  geom_hline(yintercept = 2, linetype = "dashed", color = "red") + # Cible indicative de la BCE
-  geom_hline(yintercept = 0, color = "black") +
+hicp_components <- hicp %>%
+  filter(
+    geo == "PT",
+    coicop %in% c(
+      "CP011", # alimentation hors alcool
+      "CP021", # alcool et tabac
+      "CP03",  # habillement, chaussures
+      "CP04",  # logement, énergie
+      "CP05",  # ameublement
+      "CP06",  # santé
+      "CP07",  # transports (incl. carburants)
+      "CP08",  # communications
+      "CP09",  # loisirs
+      "CP10",  # éducation
+      "CP11",  # restauration / hôtellerie
+      "CP12"   # autres services
+    ),
+    unit == "RCH_A"
+  ) %>%
+  filter(TIME_PERIOD >= as.Date("2023-01-01"))
+```
+
+
+Graphique comparaison inflation totale et sous-jacente
+```{r}
+df_infl <- bind_rows(
+  hicp_total %>% mutate(type = "Inflation totale"),
+  hicp_core %>% mutate(type = "Inflation sous-jacente")
+) %>% 
+  filter(TIME_PERIOD >= as.Date("2024-01-01"))
+
+ggplot(df_infl, aes(TIME_PERIOD, values, color = type)) +
+  geom_line(size = 1.2) +
   labs(
-    title = "Inflation Annuelle de l'IPCH au Portugal (PT)",
-    subtitle = "Taux de variation annuel (en %)",
+    title = "Portugal – Inflation totale et sous-jacente",
+    subtitle = "Taux annuels (%)",
     x = "Date",
-    y = "Taux d'Inflation (%)"
+    y = "%",
+    color = "",
+    caption = "Source : Eurostat (prc_hicp_manr)"
   ) +
-  theme_minimal() +
-  geom_point(data = tail(inflation_globale, 1), aes(x = TIME_PERIOD, y = inflation_annuelle), color = "red", size = 3)
+  theme_minimal(base_size = 13)
+
 ```
 
-Décomposition par aggrégats
+Tableau comparaison inflation totale et sous-jacente
 ```{r}
-aggregats_decomposition <- c("CP00", "NRG", "SERV", "FOOD", "AP")
-data_decomposition <- inflation_complete %>%
-  filter(coicop %in% aggregats_decomposition) %>%
-  mutate(coicop = factor(coicop, levels = aggregats_decomposition))
+table_infl <- df_infl %>%
+  arrange(type, TIME_PERIOD) %>%
+  group_by(type) %>%
+  mutate(variation_yoy = values) %>%   # déjà en YoY dans Eurostat
+  select(TIME_PERIOD, type, variation_yoy)
 
-ggplot(data_decomposition, aes(x = TIME_PERIOD, y = inflation_annuelle, color = coicop)) +
-  geom_line(size = 1) +
+table_infl
+```
+
+
+Graphique de la décomposition de l'inflation
+```{r}
+ggplot(hicp_comp_grouped, aes(TIME_PERIOD, values, color = groupe)) +
+  geom_line(size = 1.2) +
   labs(
-    title = "Décomposition de l'Inflation Annuelle au Portugal",
-    subtitle = "Comparaison des taux de croissance annuels par agrégat",
+    title = "Portugal – Décomposition de l'inflation",
+    subtitle = "Taux annuels (%)",
     x = "Date",
-    y = "Taux d'Inflation (%)",
-    color = "Secteur"
+    y = "%",
+    color = "Composante",
+    caption = "Source : Eurostat (prc_hicp_manr)"
   ) +
-  scale_color_manual(
-    values = c("CP00" = "black", "NRG" = "red", "SERV" = "blue", "FOOD" = "darkgreen", "AP" = "purple"),
-    labels = c(
-      "CP00" = "Total IPCH",
-      "NRG" = "Énergie",
-      "SERV" = "Services",
-      "FOOD" = "Alimentation",
-      "AP" = "Inflation Sous-jacente (hors NRG & Alim. non-transf.)"
-    )
-  ) +
-  theme_minimal() +
-  theme(legend.position = "bottom")
+  theme_minimal(base_size = 13)
+
 ```
 
-# Prix à la production
 
-```{r}
-id <- "sts_inppd_m"
-ipp <- get_eurostat(id)
-
-agrégats_cles_ppi <- c(
-  "TOTAL",    # Prix de production total (Indice principal)
-  "MIG_ENER", # Agrégat énergie (le plus volatil)
-  "MIG_IND",  # Biens intermédiaires (souvent liés aux matières premières)
-  "MIG_CAP",  # Biens d'équipement
-  "MIG_CONS"  # Biens de consommation (total)
-)
-
-ipp_clean <- ipp %>% 
-  filter(geo == "PT", indic_bt == "V12400", nace_r2 %in% agrégats_cles_ppi) %>%
-  rename(taux_annuel_ppi = values, secteur_nace = nace_r2) %>%
-  mutate(time = as.Date(paste0(TIME_PERIOD, "-01"), format = "%Y-%m-%d")) %>%
-  arrange(time) %>%
-  select(time, secteur_nace, taux_annuel_ppi)
-```
-
-Indicateur global
-```{r}
-ppi_global_pt <- ipp_clean %>%
-  filter(secteur_nace == "TOTAL")
-tail(ppi_global_pt, 1)
-```
-
-# Compte courant
-
-```{r}
-id <- "ei_bpm6ca_m"
-compte_courant <- get_eurostat(id)
-```
-
-# Dette et déficit publique
-
-```{r}
-id <- "tipsgo"
-dette <- get_eurostat(id)
-```
 

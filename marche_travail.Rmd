@@ -18,41 +18,126 @@ Chargement des packages
 library(tidyverse)
 library(eurostat)
 library(lubridate)
-library(janitor)
-library(ggthemes)
-library(mFilter)
 ```
 
 # Taux de chômage
 
 Importation des données 
 ```{r}
-id <- "ei_lmhr_m"
-chomage <- get_eurostat(id)
-chomage_clean <- chomage %>% 
-  filter(s_adj == "SA", 
-         geo == "PT",
-         indic %in% c("LM-UN-T-GT25", # + de 25 ans
-                      "LM-UN-T-LE25", # 25 ans et -
-                      "LM-UN-T-TOT")) %>% 
-  select(indic, TIME_PERIOD, values)
+chomage <- get_eurostat("une_rt_m", time_format = "date") 
+chomage <- chomage %>%
+  filter(geo == "PT",
+         sex == "T",
+         age == "TOTAL",
+         s_adj == "SA", 
+         unit == "PC_ACT") %>%
+  filter(TIME_PERIOD >= as.Date("2023-01-01"))
+```
+
+Table 
+```{r}
+table_chomage <- chomage %>%
+  arrange(TIME_PERIOD) %>%
+  mutate(var_mens = round((values - lag(values)), 2),
+         var_yoy = round((values - lag(values, 12)), 2)) %>%
+  select(TIME_PERIOD, values, var_mens, var_yoy) %>%
+  filter(TIME_PERIOD >= as.Date("2024-01-01"))
+
+table_chomage
 ```
 
 Graphique
 ```{r}
-chomage_clean %>% 
-  ggplot(aes(x = TIME_PERIOD, y = values, colour = indic)) + 
-  geom_line(size = 0.5) + 
+ggplot(chomage, aes(TIME_PERIOD, values)) +
+  geom_line(size=1.1, color="darkred") +
   labs(
-    title = "Évolution du chômage au portugal",
-    x = "Année",
-    y = "Taux de chômage",
-    colour = "Population"
+    title = "Portugal – Taux de chômage",
+    subtitle = "Données mensuelles, désaisonnalisées",
+    y = "%",
+    x = "Date",
+    caption = "Source : Eurostat (une_rt_m)"
   ) +
-  theme_minimal() +  
-  theme(
-    plot.title = element_text(face = "bold"),
-    panel.grid.minor = element_blank()
-  )
+  theme_minimal(base_size = 13)
 ```
 
+# Emploi total 
+
+Importation des données
+```{r}
+emploi <- get_eurostat("lfsq_egan", time_format = "date") 
+emploi <- emploi %>%
+  filter(geo == "PT",
+         sex == "T",
+         age == "Y15-74",
+         unit == "THS_PER",
+         citizen == "TOTAL") %>%   
+  filter(TIME_PERIOD >= as.Date("2023-01-01"))
+```
+
+Table 
+```{r}
+table_emploi <- emploi %>%
+  arrange(TIME_PERIOD) %>%
+  mutate(
+    qoq = round((values/lag(values) - 1)*100, 2),
+    yoy = round((values/lag(values, 4) - 1)*100, 2)
+  ) %>%
+  select(TIME_PERIOD, values, qoq, yoy) %>%   
+  filter(TIME_PERIOD >= as.Date("2024-01-01"))
+
+table_emploi
+```
+
+Graphique 
+```{r}
+ggplot(emploi, aes(TIME_PERIOD, values)) +
+  geom_line(color="steelblue", size=1.2) +
+  labs(
+    title = "Portugal – Emploi total (LFS)",
+    subtitle = "15–74 ans, en milliers de personnes",
+    x = "Date",
+    y = "Milliers",
+    caption = "Source : Eurostat (lfsq_egan)"
+  ) +
+  theme_minimal(base_size = 13)
+```
+
+# Tension sur le marché du travail
+
+```{r}
+vacancies <- get_eurostat("jvs_q_nace2", time_format = "date") 
+vacancies <- vacancies %>%
+  filter(geo == "PT",
+         nace_r2 == "A-S",
+         sizeclas == "TOTAL",
+         indic_em == "JOBRATE") %>%   
+  filter(TIME_PERIOD >= as.Date("2023-01-01"))
+```
+
+Table
+```{r}
+vacancies_table <- vacancies %>%
+  arrange(TIME_PERIOD) %>%
+  mutate(
+    yoy = round(values - lag(values, 4), 2)  # variation t/ t-4
+  ) %>%
+  select(TIME_PERIOD, values, yoy) %>% 
+  filter(TIME_PERIOD >= as.Date("2024-01-01"))
+vacancies_table
+```
+
+Graphique
+```{r}
+ggplot(vacancies, aes(TIME_PERIOD, values)) +
+  geom_line(size = 1.1, color = "darkorange3") +
+  labs(
+    title = "Portugal – Taux d'emplois vacants (NSA)",
+    subtitle = "En %, ensemble des secteurs (A-S), données non désaisonnalisées",
+    x = "Date",
+    y = "%",
+    caption = "Source : Eurostat (jvs_q_nace2)"
+  ) +
+  theme_minimal(base_size = 13)
+
+```
+A ne pas forcément inclure comme les données ne sont pas désaisonnalisées. 
