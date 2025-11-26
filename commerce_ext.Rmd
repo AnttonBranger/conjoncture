@@ -1,0 +1,121 @@
+---
+title: "Commerce extérieur"
+output: html_document
+date: "2025-11-26"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Chargement des packages
+```{r}
+library(eurostat)
+library(tidyverse)
+library(lubridate)
+library(janitor)
+library(ggthemes)
+library(mFilter)
+library(zoo)
+```
+
+Importation des données 
+```{r}
+biens <- get_eurostat("ext_st_27_2020msbec", time_format = "date")
+biens <- biens %>%
+  filter(
+    geo == "PT",
+    partner == "WORLD",          
+    stk_flow %in% c("EXP", "IMP"),  
+    bclas_bec == "TOTAL",           
+    indic_et == "TRD_VAL_SCA"               
+  ) %>%
+  select(TIME_PERIOD, stk_flow, values) %>%
+  arrange(TIME_PERIOD) %>% 
+  filter(TIME_PERIOD >= as.Date("2023-01-01")) %>%
+  tidyr::pivot_wider(names_from = stk_flow, values_from = values) %>%
+  mutate(balance = EXP - IMP)
+```
+
+```{r}
+biens_q <- biens %>%
+  mutate(quarter = lubridate::floor_date(TIME_PERIOD, "quarter")) %>%
+  group_by(quarter) %>%
+  summarise(
+    EXPORT = sum(EXP, na.rm = TRUE),
+    IMPORT = sum(IMP, na.rm = TRUE),
+    balance = sum(balance, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  rename(TIME_PERIOD = quarter) %>%
+  arrange(TIME_PERIOD)
+```
+
+```{r}
+pib <- get_eurostat("namq_10_gdp", time_format = "date") %>%
+  filter(
+    geo == "PT",
+    na_item == "B1GQ",
+    s_adj == "SCA", 
+    unit == "CLV20_MEUR"
+  ) %>%
+  select(TIME_PERIOD, values) %>% 
+  filter(TIME_PERIOD >= as.Date("2023-01-01")) %>% 
+  rename(PIB = values)
+
+biens_q <- biens_q %>%
+  left_join(pib, by = "TIME_PERIOD") %>%
+  mutate(balance_pct_gdp = 100 * balance / PIB)
+```
+
+Glissment 
+```{r}
+biens_q <- biens_q %>%
+  arrange(TIME_PERIOD) %>%
+  mutate(
+    export_yoy = 100 * (EXPORT / lag(EXPORT, 4) - 1),
+    import_yoy = 100 * (IMPORT / lag(IMPORT, 4) - 1),
+    balance_yoy = 100 * (balance / lag(balance, 4) - 1)
+  ) %>% 
+  filter(TIME_PERIOD >= as.Date("2024-01-01"))
+```
+
+Graphiques
+```{r}
+ggplot(biens, aes(TIME_PERIOD)) +
+  geom_line(aes(y = EXP, color = "Exportations"), size = 1.2) +
+  geom_line(aes(y = IMP, color = "Importations"), size = 1.2) +
+  labs(
+    title = "Portugal – Commerce de biens (mensuel)",
+    subtitle = "Millions d'euros",
+    x = "", y = "Mio EUR", color = ""
+  ) +
+  theme_minimal(base_size = 13)
+```
+
+```{r}
+ggplot(biens_q, aes(TIME_PERIOD, balance_pct_gdp)) +
+  geom_line(size = 1.2, color = "darkgreen") +
+  labs(
+    title = "Portugal – Balance commerciale en % du PIB",
+    x = "", y = "% du PIB"
+  ) +
+  theme_minimal(base_size = 13)
+```
+
+
+# Balance des paiements
+
+```{r}
+bop_pt <- get_eurostat("bop_c6_q", time_format = "date") 
+bop_pt <- bop_pt %>%
+  filter(
+    geo == "PT",
+    unit == "MIO_EUR",
+    s_adj == "NSA"        # PT n’a souvent que le NSA
+  ) %>%
+  select(time, bop_item, stk_flow, values) %>%
+  arrange(time)
+```
+
+
