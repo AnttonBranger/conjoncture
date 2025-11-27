@@ -34,3 +34,25 @@ cp_clean <- cp %>%
          indic == "BS-ICU-PC") %>% 
   select(indic, TIME_PERIOD, values)
 ```
+
+Graphique 
+```{r}
+cap_24_25 <- cp_clean %>%
+  filter(TIME_PERIOD >= as.Date("2024-01-01"))
+
+ggplot(cap_24_25, aes(x = TIME_PERIOD, y = values)) +
+  geom_line(col = "steelblue", size = 1) +
+  labs(
+    title = "Taux d'utilisation des capacités — Portugal",
+    subtitle = "2024–2025",
+    x = "Date (trimestre)",
+    y = "Capacité utilisée (%)"
+  ) +
+  theme_minimal()
+```
+
+Tableau
+```{r}
+print(cap_24_25)
+```
+

@@ -15,6 +15,10 @@ rm(list = ls())
 
 Chargement des packages 
 ```{r, include=FALSE}
+install_if_missing <- function(pkgs){
+  for(p in pkgs) if(!requireNamespace(p, quietly=TRUE)) install.packages(p)
+}
+install_if_missing(c("janitor", "eurostat", "ggthemes", "mFilter"))
 library(tidyverse)
 library(eurostat)
 library(lubridate)
@@ -63,7 +67,7 @@ ggplot(pib_clean, aes(x = TIME_PERIOD, y = output_gap)) +
   geom_hline(yintercept = 0, col = "red") +
   geom_line() +
   labs(
-    title = "Output Gap — France",
+    title = "Output Gap — Protugal",
     subtitle = "Écart de production en % du PIB potentiel",
     x = "Année",
     y = "Output gap (%)"
@@ -75,7 +79,7 @@ ggplot(pib_clean, aes(x = TIME_PERIOD, y = output_gap)) +
 ```
 
 ```{r}
-ggplot(pib_clean %>% filter(format(TIME_PERIOD, "%Y") >= 2008), aes(x = TIME_PERIOD)) +
+ggplot(pib_clean %>% filter(format(TIME_PERIOD, "%Y") >= 2015), aes(x = TIME_PERIOD)) +
   
   # Barres Output Gap
   geom_col(aes(y = output_gap, fill = output_gap > 0)) +
