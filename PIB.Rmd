@@ -234,5 +234,7 @@ tableau_final_format_G <- pib_final_calcul %>%
   mutate(across(starts_with("20"), ~ replace_na(as.character(.x), "")))
 
 print(tableau_final_format_G)
+write.csv2(tableau_final_format_G, "decomposition_pib.csv", 
+           row.names = FALSE, fileEncoding = "UTF-8")
 ```
 Lors de l'exportation il faut mettre à 0 la variation des stocks pour 2024T3. 

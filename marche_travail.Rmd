@@ -44,6 +44,8 @@ table_chomage <- chomage %>%
   filter(TIME_PERIOD >= as.Date("2024-01-01"))
 
 table_chomage
+write.csv2(table_chomage, "chomage.csv", 
+          row.names = FALSE, fileEncoding = "UTF-8")
 ```
 
 Graphique
@@ -86,6 +88,8 @@ table_emploi <- emploi %>%
   filter(TIME_PERIOD >= as.Date("2024-01-01"))
 
 table_emploi
+write.csv2(table_emploi, "emploi.csv", 
+           row.names = FALSE, fileEncoding = "UTF-8")
 ```
 
 Graphique 
@@ -124,6 +128,8 @@ vacancies_table <- vacancies %>%
   select(TIME_PERIOD, values, yoy) %>% 
   filter(TIME_PERIOD >= as.Date("2024-01-01"))
 vacancies_table
+write.csv2(vacancies_table, "vacance_emploi.csv", 
+           row.names = FALSE, fileEncoding = "UTF-8")
 ```
 
 Graphique
@@ -138,6 +144,5 @@ ggplot(vacancies, aes(TIME_PERIOD, values)) +
     caption = "Source : Eurostat (jvs_q_nace2)"
   ) +
   theme_minimal(base_size = 13)
-
 ```
 A ne pas forcément inclure comme les données ne sont pas désaisonnalisées. 

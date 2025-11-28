@@ -73,7 +73,9 @@ confiance_menages <- confiance_menages %>%
 
 Graphique
 ```{r}
-ggplot(confiance_menages, aes(TIME_PERIOD, values)) +
+confiance_menages %>% 
+  filter(TIME_PERIOD >= as.Date("2024-01-01")) %>% 
+  ggplot(aes(TIME_PERIOD, values)) +
   geom_line(size = 1.1, color = "darkorange3") +
   labs(
     title = "Portugal – Indicateur de confiance des consommateurs",

@@ -106,6 +106,8 @@ table_infl <- df_infl %>%
   select(TIME_PERIOD, type, variation_yoy)
 
 table_infl
+write.csv2(table_infl, "inflation.csv", 
+           row.names = FALSE, fileEncoding = "UTF-8")
 ```
 
 
