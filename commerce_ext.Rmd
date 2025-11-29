@@ -120,7 +120,8 @@ ggplot(export_import, aes(x = TIME_PERIOD, y = values, color = item)) +
     title = "Portugal — Exportations et importations de biens & services",
     x = "Période",
     y = "Millions d'euros",
-    color = ""
+    color = "",
+    caption = "Source : Eurostat (ext_st_27_2020msbec et bop_c6_m)"
   ) +
   theme_minimal()
 ```
@@ -154,7 +155,8 @@ ggplot(solde_total, aes(x = TIME_PERIOD)) +
   labs(
     title = "Portugal — Solde commercial (biens + services)",
     y = "Millions d'euros",
-    x = ""
+    x = "",
+    caption = "Source : Eurostat (ext_st_27_2020msbec et bop_c6_m)"
   ) +
   theme_minimal()
 ```
@@ -177,12 +179,15 @@ tce_pt <- tce %>%
 
 Graphique 
 ```{r}
-ggplot(tce_pt, aes(x = quarter, y = values)) +
+tce_pt %>% 
+  filter(quarter >= as.Date("2024-01-01")) %>% 
+  ggplot(aes(x = quarter, y = values)) +
   geom_line(color = "steelblue", linewidth = 1.2) +
   labs(
     title = "Portugal — Taux de change effectif nominal (NEER)",
     x = "Trimestre",
-    y = "Index (2015 = 100)"
+    y = "Index (2015 = 100)",
+    caption = "Source : Eurostat (ert_eff_ic_q)"
   ) +
   theme_minimal()
 ```
@@ -203,5 +208,7 @@ tableau_services <- services_pt_sa %>%
   filter(TIME_PERIOD >= as.Date("2024-01-01"))
 
 tableau_services
+write.csv2(tableau_services, "solde_commercial.csv", 
+           row.names = FALSE, fileEncoding = "UTF-8")
 ```
 

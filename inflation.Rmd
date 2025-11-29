@@ -94,7 +94,6 @@ ggplot(df_infl, aes(TIME_PERIOD, values, color = type)) +
     caption = "Source : Eurostat (prc_hicp_manr)"
   ) +
   theme_minimal(base_size = 13)
-
 ```
 
 Tableau comparaison inflation totale et sous-jacente

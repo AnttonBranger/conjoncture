@@ -31,7 +31,7 @@ chomage <- chomage %>%
          age == "TOTAL",
          s_adj == "SA", 
          unit == "PC_ACT") %>%
-  filter(TIME_PERIOD >= as.Date("2023-01-01"))
+  filter(TIME_PERIOD >= as.Date("2024-01-01"))
 ```
 
 Table 
@@ -94,7 +94,9 @@ write.csv2(table_emploi, "emploi.csv",
 
 Graphique 
 ```{r}
-ggplot(emploi, aes(TIME_PERIOD, values)) +
+emploi %>% 
+  filter(TIME_PERIOD >= as.Date("2024-01-01")) %>% 
+  ggplot(aes(TIME_PERIOD, values)) +
   geom_line(color="steelblue", size=1.2) +
   labs(
     title = "Portugal – Emploi total (LFS)",
@@ -134,7 +136,9 @@ write.csv2(vacancies_table, "vacance_emploi.csv",
 
 Graphique
 ```{r}
-ggplot(vacancies, aes(TIME_PERIOD, values)) +
+vacancies %>% 
+  filter(TIME_PERIOD >= as.Date("2024-01-01")) %>% 
+  ggplot(aes(TIME_PERIOD, values)) +
   geom_line(size = 1.1, color = "darkorange3") +
   labs(
     title = "Portugal – Taux d'emplois vacants (NSA)",

@@ -44,7 +44,8 @@ ggplot(deficit_pt, aes(x = TIME_PERIOD, y = values)) +
   theme_minimal() +
   labs(
     title = "Portugal – Déficit public (% du PIB)",
-    y = "% PIB", x = ""
+    y = "% PIB", x = "",
+    caption = "Source : Eurostat (gov_10dd_edpt1)"
   )
 ```
 
@@ -71,7 +72,8 @@ ggplot(dette, aes(x = TIME_PERIOD, y = values)) +
   theme_minimal() +
   labs(
     title = "Portugal – Dette publique (% du PIB)",
-    y = "% PIB", x = ""
+    y = "% PIB", x = "",
+    caption = "Source : Eurostat (gov_10dd_edpt1)"
   )
 ```
 
@@ -95,7 +97,8 @@ ggplot(taux_10y_pt, aes(x = TIME_PERIOD, y = values)) +
   theme_minimal() +
   labs(
     title = "Portugal – Taux à 10 ans (obligations d'État)",
-    x = "", y = "%"
+    x = "", y = "%",
+    caption = "Source : Eurostat (irt_lt_mcby_m)"
   )
 ```
 
