@@ -54,5 +54,7 @@ ggplot(cap_24_25, aes(x = TIME_PERIOD, y = values)) +
 Tableau
 ```{r}
 print(cap_24_25)
+write.csv2(cap_24_25, "capacite_prod.csv",
+           row.names = FALSE, fileEncoding = "UTF-8")
 ```
 

@@ -216,3 +216,19 @@ ggplot(taux_10y_pt, aes(x = TIME_PERIOD, y = values)) +
     x = "", y = "%",
     caption = "Source : Eurostat (irt_lt_mcby_m)"
   )
+
+
+###########################################
+# Utilisation des capacités de production #
+###########################################
+
+ggplot(cap_24_25, aes(x = TIME_PERIOD, y = values)) +
+  geom_line(col = "steelblue", size = 1) +
+  labs(
+    title = "Taux d'utilisation des capacités — Portugal",
+    subtitle = "2024–2025",
+    x = "Date (trimestre)",
+    y = "Capacité utilisée (%)",
+    caption = "Source : Eurostat (ei_bsin_q_r2)"
+  ) +
+  theme_minimal()
