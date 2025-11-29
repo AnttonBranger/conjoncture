@@ -1,0 +1,101 @@
+---
+title: "Finances publiques"
+output: html_document
+date: "2025-11-29"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(eurostat)
+library(tidyverse)
+library(lubridate)
+library(janitor)
+library(ggthemes)
+library(mFilter)
+library(zoo)
+library(seasonal)
+```
+
+
+# Déficit publique
+
+```{r}
+deficit <- get_eurostat("gov_10dd_edpt1", time_format = "date") 
+deficit_pt <- deficit %>%
+  filter(
+    geo == "PT",
+    unit == "PC_GDP",
+    na_item == "B9",
+    sector == "S13"
+  ) %>%
+  select(TIME_PERIOD, values) %>%
+  arrange(TIME_PERIOD) %>% 
+  filter(TIME_PERIOD >= as.Date("2020-01-01"))
+```
+
+Graphique
+```{r}
+ggplot(deficit_pt, aes(x = TIME_PERIOD, y = values)) +
+  geom_line(size = 1) +
+  geom_hline(yintercept = -3, linetype = "dashed", color = "red") +
+  theme_minimal() +
+  labs(
+    title = "Portugal – Déficit public (% du PIB)",
+    y = "% PIB", x = ""
+  )
+```
+
+# Dette publique 
+
+```{r}
+dette <- deficit %>%
+  filter(
+    geo == "PT",
+    unit == "PC_GDP",
+    na_item == "GD",
+    sector == "S13"
+  ) %>%
+  select(TIME_PERIOD, values) %>%
+  arrange(TIME_PERIOD) %>% 
+  filter(TIME_PERIOD >= as.Date("2020-01-01"))
+```
+
+Graphique
+```{r}
+ggplot(dette, aes(x = TIME_PERIOD, y = values)) +
+  geom_line(size = 1) +
+  geom_hline(yintercept = 60, linetype = "dashed", color = "red") +
+  theme_minimal() +
+  labs(
+    title = "Portugal – Dette publique (% du PIB)",
+    y = "% PIB", x = ""
+  )
+```
+
+# Taux souverain
+
+```{r}
+taux_10y <- get_eurostat("irt_lt_mcby_m", time_format = "date") 
+taux_10y_pt <- taux_10y %>%
+  filter(
+    geo == "PT"
+  ) %>%
+  select(TIME_PERIOD, values) %>%
+  arrange(TIME_PERIOD) %>% 
+  filter(TIME_PERIOD >= as.Date("2020-01-01"))
+```
+
+Graphique
+```{r}
+ggplot(taux_10y_pt, aes(x = TIME_PERIOD, y = values)) +
+  geom_line(size = 1) +
+  theme_minimal() +
+  labs(
+    title = "Portugal – Taux à 10 ans (obligations d'État)",
+    x = "", y = "%"
+  )
+```
+

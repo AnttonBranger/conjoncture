@@ -18,7 +18,7 @@ Chargement des packages
 install_if_missing <- function(pkgs){
   for(p in pkgs) if(!requireNamespace(p, quietly=TRUE)) install.packages(p)
 }
-install_if_missing(c("janitor", "eurostat", "ggthemes", "mFilter"))
+install_if_missing(c("janitor", "eurostat", "ggthemes", "mFilter", "seasonal"))
 library(tidyverse)
 library(eurostat)
 library(lubridate)
@@ -26,6 +26,7 @@ library(janitor)
 library(ggthemes)
 library(mFilter)
 library(zoo)
+library(seasonal)
 ```
 
 

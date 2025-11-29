@@ -46,7 +46,7 @@ biens_pt_q <- biens_pt %>%
 # Import/export de services
 
 ```{r}
-services <- get_eurostat("bop_c6_q", time_format = "date")
+services <- get_eurostat("bop_c6_m", time_format = "date")
 
 services_pt <- services %>%
   filter(
@@ -58,27 +58,28 @@ services_pt <- services %>%
     sectpart == "S1",
     partner == "WRL_REST"
   ) %>%
-  select(TIME_PERIOD, stk_flow, values) %>% 
-  rename(quarter = TIME_PERIOD)
+  select(TIME_PERIOD, stk_flow, values) 
 ```
 
 On retire la saisonnalité 
 ```{r}
 services_pt2 <- services_pt %>%
-  arrange(stk_flow, quarter) %>%
+  arrange(stk_flow, TIME_PERIOD) %>%
   mutate(series_id = stk_flow)
 
 x13_apply <- function(df) {
+  date_debut <- min(df$TIME_PERIOD)
+  
   ts_data <- ts(
     df$values,
-    start = c(year(min(df$quarter)), quarter(min(df$quarter))),
-    frequency = 4
+    start = c(year(date_debut), month(date_debut)),
+    frequency = 12
   )
   
   sa <- seas(ts_data)
   
   tibble(
-    quarter = df$quarter,
+    TIME_PERIOD = df$TIME_PERIOD, 
     sa_values = as.numeric(final(sa))
   )
 }
@@ -89,7 +90,7 @@ services_sa <- services_pt2 %>%
   ungroup()
 
 services_pt_sa <- services_pt2 %>%
-  left_join(services_sa, by = c("series_id", "quarter")) %>% 
+  left_join(services_sa, by = c("series_id", "TIME_PERIOD")) %>% 
   select(-series_id) %>% 
   select(-values) %>% 
   rename(values = sa_values)
@@ -99,24 +100,25 @@ services_pt_sa <- services_pt2 %>%
 # Import/export de biens et services
 
 ```{r}
-export_import_q <- biens_pt_q %>%
+export_import <- biens_pt %>%
   rename(item = stk_flow) %>%
   mutate(type = "Biens") %>%
   bind_rows(
     services_pt_sa %>%
       rename(item = stk_flow) %>%
       mutate(type = "Services")
-  )
+  ) %>% 
+  filter(TIME_PERIOD >= as.Date("2024-01-01"))
 ```
 
 Graphique
 ```{r}
-ggplot(export_import_q, aes(x = quarter, y = values, color = item)) +
+ggplot(export_import, aes(x = TIME_PERIOD, y = values, color = item)) +
   geom_line(linewidth = 1.2) +
   facet_wrap(~ type, scales = "free_y") +
   labs(
     title = "Portugal — Exportations et importations de biens & services",
-    x = "Trimestre",
+    x = "Période",
     y = "Millions d'euros",
     color = ""
   ) +
@@ -126,7 +128,7 @@ ggplot(export_import_q, aes(x = quarter, y = values, color = item)) +
 # Solde commerciale
 
 ```{r}
-solde_biens <- biens_pt_q %>%
+solde_biens <- biens_pt %>%
   pivot_wider(names_from = stk_flow, values_from = values) %>%
   mutate(solde = EXP - IMP)
 
@@ -137,15 +139,16 @@ solde_services <- services_pt_sa %>%
 
 ```{r}
 solde_total <- solde_biens %>%
-  select(quarter, solde) %>%
+  select(TIME_PERIOD, solde) %>%
   rename(solde_biens = solde) %>%
   left_join(
-    solde_services %>% select(quarter, solde) %>% rename(solde_services = solde),
-    by = "quarter"
+    solde_services %>% select(TIME_PERIOD, solde) %>% rename(solde_services = solde),
+    by = "TIME_PERIOD"
   ) %>%
-  mutate(solde_total = solde_biens + solde_services)
+  mutate(solde_total = solde_biens + solde_services) %>% 
+  filter(TIME_PERIOD >= as.Date("2024-01-01"))
 
-ggplot(solde_total, aes(x = quarter)) +
+ggplot(solde_total, aes(x = TIME_PERIOD)) +
   geom_line(aes(y = solde_total), linewidth = 1.3, color = "darkred") +
   geom_hline(yintercept = 0, linetype = "dashed") +
   labs(
@@ -183,3 +186,22 @@ ggplot(tce_pt, aes(x = quarter, y = values)) +
   ) +
   theme_minimal()
 ```
+
+Tableau
+```{r}
+tableau_services <- services_pt_sa %>%
+  select(TIME_PERIOD, stk_flow, values) %>%
+  pivot_wider(names_from = stk_flow, values_from = values) %>%
+  rename(
+    exports_sa = CRE,
+    imports_sa = DEB
+  ) %>%
+  mutate(
+    solde_sa = exports_sa - imports_sa
+  ) %>%
+  arrange(TIME_PERIOD) %>% 
+  filter(TIME_PERIOD >= as.Date("2024-01-01"))
+
+tableau_services
+```
+
