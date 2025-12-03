@@ -123,7 +123,6 @@ ggplot(hicp_comp_grouped, aes(TIME_PERIOD, values, color = groupe)) +
     caption = "Source : Eurostat (prc_hicp_manr)"
   ) +
   theme_minimal(base_size = 13)
-
 ```
 
 

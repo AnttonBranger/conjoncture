@@ -108,18 +108,22 @@ export_import <- biens_pt %>%
       rename(item = stk_flow) %>%
       mutate(type = "Services")
   ) %>% 
+  group_by(type, item) %>% 
+  arrange(TIME_PERIOD) %>% 
+  mutate(yoy = round(values - lag(values, 4), 2)) %>% 
+  ungroup() %>% 
   filter(TIME_PERIOD >= as.Date("2024-01-01"))
 ```
 
 Graphique
 ```{r}
-ggplot(export_import, aes(x = TIME_PERIOD, y = values, color = item)) +
+ggplot(export_import, aes(x = TIME_PERIOD, y = yoy, color = item)) +
   geom_line(linewidth = 1.2) +
   facet_wrap(~ type, scales = "free_y") +
   labs(
     title = "Portugal — Exportations et importations de biens & services",
     x = "Période",
-    y = "Millions d'euros",
+    y = "Taux de croissance",
     color = "",
     caption = "Source : Eurostat (ext_st_27_2020msbec et bop_c6_m)"
   ) +
@@ -146,15 +150,16 @@ solde_total <- solde_biens %>%
     solde_services %>% select(TIME_PERIOD, solde) %>% rename(solde_services = solde),
     by = "TIME_PERIOD"
   ) %>%
-  mutate(solde_total = solde_biens + solde_services) %>% 
+  mutate(solde_total = solde_biens + solde_services) %>%
+  arrange(TIME_PERIOD) %>% 
+  mutate(yoy = round(solde_total - lag(solde_total, 4), 2)) %>% 
   filter(TIME_PERIOD >= as.Date("2024-01-01"))
 
 ggplot(solde_total, aes(x = TIME_PERIOD)) +
-  geom_line(aes(y = solde_total), linewidth = 1.3, color = "darkred") +
-  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_line(aes(y = yoy), linewidth = 1.3, color = "darkred") +
   labs(
     title = "Portugal — Solde commercial (biens + services)",
-    y = "Millions d'euros",
+    y = "Taux de croissance",
     x = "",
     caption = "Source : Eurostat (ext_st_27_2020msbec et bop_c6_m)"
   ) +

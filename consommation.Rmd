@@ -39,16 +39,16 @@ conso <- conso %>%
     t_t = (values / lag(values) - 1) * 100,
     yoy = (values / lag(values, 4) - 1) * 100
   ) %>% 
-  filter(TIME_PERIOD >= as.Date("2024-01-01"))
+  filter(TIME_PERIOD >= as.Date("2023-01-01"))
 ```
 
 Graphique
 ```{r}
-ggplot(conso, aes(TIME_PERIOD, values)) +
+ggplot(conso, aes(TIME_PERIOD, yoy)) +
   geom_line(size = 1.1, color = "darkblue") +
   labs(
     title = "Portugal – Consommation des ménages (volume)",
-    subtitle = "En millions d’euros constants – désaisonnalisé (SCA)",
+    subtitle = "Taux de croissance en glissement annuel",
     y = "",
     x = "",
     caption = "Source : Eurostat (nama_10_gdp)"

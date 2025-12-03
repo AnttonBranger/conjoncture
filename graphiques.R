@@ -9,7 +9,7 @@ ggplot(pib_clean2, aes(x = YEAR)) +
     title = "Évolution du PIB en volume et PIB potentiel",
     x = "Année",
     y = "PIB (millions d’euros)",
-    caption = "Source : Eurostat (namq_10_gdp)"
+    caption = "Source : Eurostat (namq_10_gdp), Ameco"
   ) +
   theme_minimal() +  
   theme(
@@ -21,11 +21,11 @@ ggplot(pib_clean2, aes(x = YEAR, y = output_gap)) +
   geom_hline(yintercept = 0, col = "red") +
   geom_line() +
   labs(
-    title = "Output Gap — Protugal",
+    title = "Output Gap — Portugal",
     subtitle = "Écart de production en % du PIB potentiel",
     x = "Année",
     y = "Output gap (%)",
-    caption = "Source : Eurostat (namq_10_gdp)"
+    caption = "Source : Eurostat (namq_10_gdp), Ameco"
   ) +
   theme_minimal() +
   theme(
@@ -40,11 +40,21 @@ ggplot(pib_clean2 %>% filter(YEAR >= 2015), aes(x = YEAR)) +
   
   # Ligne croissance du PIB
   geom_line(aes(y = pct_gdp_growth * 1), linewidth = 1.1) +
+  geom_hline(yintercept = 0, col = "red") +
   
-  # Deux axes Y
+  # Axes améliorés
+  scale_x_continuous(
+    breaks = seq(2015, max(pib_clean2$YEAR, na.rm = TRUE), by = 1),  # années entières
+    minor_breaks = NULL
+  ) +
   scale_y_continuous(
     name = "Output Gap (%)",
-    sec.axis = sec_axis(~ ., name = "Taux de croissance du PIB réel (%)")
+    breaks = seq(-8, 18, by = 4),             # plus de graduations
+    sec.axis = sec_axis(
+      ~ ., 
+      name = "Taux de croissance du PIB réel (%)",
+      breaks = seq(-8, 18, by = 4)            # idem axe secondaire
+    )
   ) +
   
   # Titres
@@ -52,7 +62,7 @@ ggplot(pib_clean2 %>% filter(YEAR >= 2015), aes(x = YEAR)) +
     title = "Taux de croissance du PIB réel et Output Gap",
     subtitle = "Données trimestrielles",
     x = "Année",
-    caption = "Source : Eurostat (namq_10_gdp)"
+    caption = "Source : Eurostat (namq_10_gdp), Ameco"
   ) +
   
   theme_minimal(base_size = 12) +
@@ -61,15 +71,30 @@ ggplot(pib_clean2 %>% filter(YEAR >= 2015), aes(x = YEAR)) +
     axis.title.y.right = element_text(color = "black")
   )
 
+###########################################
+# Utilisation des capacités de production #
+###########################################
+
+ggplot(cap_24_25, aes(x = TIME_PERIOD, y = values)) +
+  geom_line(col = "steelblue", size = 1) +
+  labs(
+    title = "Taux d'utilisation des capacités — Portugal",
+    subtitle = "2024–2025",
+    x = "Date (trimestre)",
+    y = "Capacité utilisée (%)",
+    caption = "Source : Eurostat (ei_bsin_q_r2)"
+  ) +
+  theme_minimal()
+
 #######################
 ###  Consommation  ####
 #######################
 
-ggplot(conso, aes(TIME_PERIOD, values)) +
+ggplot(conso, aes(TIME_PERIOD, yoy)) +
   geom_line(size = 1.1, color = "darkblue") +
   labs(
-    title = "Portugal – Consommation des ménages",
-    subtitle = "En millions d’euros constants",
+    title = "Portugal – Consommation des ménages (volume)",
+    subtitle = "Taux de croissance en glissement annuel",
     y = "",
     x = "",
     caption = "Source : Eurostat (nama_10_gdp)"
@@ -105,13 +130,13 @@ ggplot(chomage, aes(TIME_PERIOD, values)) +
 
 emploi %>% 
   filter(TIME_PERIOD >= as.Date("2024-01-01")) %>% 
-  ggplot(aes(TIME_PERIOD, values)) +
+  ggplot(aes(TIME_PERIOD, yoy)) +
   geom_line(color="steelblue", size=1.2) +
   labs(
     title = "Portugal – Emploi total (LFS)",
     subtitle = "15–74 ans, en milliers de personnes",
     x = "Date",
-    y = "Milliers",
+    y = "Taux de croissance",
     caption = "Source : Eurostat (lfsq_egan)"
   ) +
   theme_minimal(base_size = 13)
@@ -149,24 +174,23 @@ ggplot(df_infl, aes(TIME_PERIOD, values, color = type)) +
 #### Commerce ext #####
 #######################
 
-ggplot(export_import, aes(x = TIME_PERIOD, y = values, color = item)) +
+ggplot(export_import, aes(x = TIME_PERIOD, y = yoy, color = item)) +
   geom_line(linewidth = 1.2) +
   facet_wrap(~ type, scales = "free_y") +
   labs(
     title = "Portugal — Exportations et importations de biens & services",
     x = "Période",
-    y = "Millions d'euros",
+    y = "Taux de croissance",
     color = "",
     caption = "Source : Eurostat (ext_st_27_2020msbec et bop_c6_m)"
   ) +
   theme_minimal()
 
 ggplot(solde_total, aes(x = TIME_PERIOD)) +
-  geom_line(aes(y = solde_total), linewidth = 1.3, color = "darkred") +
-  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_line(aes(y = yoy), linewidth = 1.3, color = "darkred") +
   labs(
     title = "Portugal — Solde commercial (biens + services)",
-    y = "Millions d'euros",
+    y = "Taux de croissance",
     x = "",
     caption = "Source : Eurostat (ext_st_27_2020msbec et bop_c6_m)"
   ) +
@@ -217,18 +241,3 @@ ggplot(taux_10y_pt, aes(x = TIME_PERIOD, y = values)) +
     caption = "Source : Eurostat (irt_lt_mcby_m)"
   )
 
-
-###########################################
-# Utilisation des capacités de production #
-###########################################
-
-ggplot(cap_24_25, aes(x = TIME_PERIOD, y = values)) +
-  geom_line(col = "steelblue", size = 1) +
-  labs(
-    title = "Taux d'utilisation des capacités — Portugal",
-    subtitle = "2024–2025",
-    x = "Date (trimestre)",
-    y = "Capacité utilisée (%)",
-    caption = "Source : Eurostat (ei_bsin_q_r2)"
-  ) +
-  theme_minimal()

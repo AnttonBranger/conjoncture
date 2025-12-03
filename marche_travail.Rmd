@@ -73,17 +73,19 @@ emploi <- emploi %>%
          age == "Y15-74",
          unit == "THS_PER",
          citizen == "TOTAL") %>%   
-  filter(TIME_PERIOD >= as.Date("2023-01-01"))
+  filter(TIME_PERIOD >= as.Date("2023-01-01")) %>% 
+  arrange(TIME_PERIOD) %>%
+  mutate(
+    qoq = round((values/lag(values) - 1)*100, 2),
+    yoy = round((values/lag(values, 4) - 1)*100, 2)
+  ) %>%   
+  filter(TIME_PERIOD >= as.Date("2024-01-01"))
 ```
 
 Table 
 ```{r}
 table_emploi <- emploi %>%
   arrange(TIME_PERIOD) %>%
-  mutate(
-    qoq = round((values/lag(values) - 1)*100, 2),
-    yoy = round((values/lag(values, 4) - 1)*100, 2)
-  ) %>%
   select(TIME_PERIOD, values, qoq, yoy) %>%   
   filter(TIME_PERIOD >= as.Date("2024-01-01"))
 
@@ -96,13 +98,13 @@ Graphique
 ```{r}
 emploi %>% 
   filter(TIME_PERIOD >= as.Date("2024-01-01")) %>% 
-  ggplot(aes(TIME_PERIOD, values)) +
+  ggplot(aes(TIME_PERIOD, yoy)) +
   geom_line(color="steelblue", size=1.2) +
   labs(
     title = "Portugal – Emploi total (LFS)",
     subtitle = "15–74 ans, en milliers de personnes",
     x = "Date",
-    y = "Milliers",
+    y = "Taux de croissance",
     caption = "Source : Eurostat (lfsq_egan)"
   ) +
   theme_minimal(base_size = 13)
@@ -117,7 +119,7 @@ vacancies <- vacancies %>%
          nace_r2 == "A-S",
          sizeclas == "TOTAL",
          indic_em == "JOBRATE") %>%   
-  filter(TIME_PERIOD >= as.Date("2023-01-01"))
+  filter(TIME_PERIOD >= as.Date("2023-01-01")) 
 ```
 
 Table
