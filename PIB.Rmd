@@ -32,24 +32,48 @@ library(seasonal)
 
 Importation des données
 ```{r}
-dataset_id <- "namq_10_gdp"
+dataset_id <- "nama_10_gdp"
 pib <- get_eurostat(dataset_id)
 pib_clean <- pib %>% 
   filter(geo == "PT",
          na_item == "B1GQ",
-         unit == "CLV20_MEUR",
-         s_adj == "SCA") %>% 
+         unit == "CLV20_MEUR") %>% 
   mutate(potentiel = hpfilter(values, freq = 1600)$trend,
          output_gap = 100 * (values - potentiel) / potentiel,
+         pct_gdp_growth = (values / dplyr::lag(values, 4) - 1) * 100)
+```
+
+```{r}
+ameco <- read.csv("AMECO6.csv")
+ameco_pt <- ameco %>% 
+  filter(COUNTRY == "Portugal",
+         TITLE == "Potential gross domestic product at 2020 reference levels")
+ameco_long <- ameco_pt %>%
+  pivot_longer(
+    cols = starts_with("X"),
+    names_to = "YEAR",
+    values_to = "VALUE"
+  ) %>%
+  mutate(YEAR = as.numeric(str_remove(YEAR, "X"))) %>%
+  select(-matches("Unnamed"))
+ameco_long <- ameco_long %>% 
+  select(YEAR, VALUE)
+
+pib_clean2 <- pib_clean %>% 
+  mutate(YEAR = as.numeric(format(TIME_PERIOD, "%Y"))) %>% 
+  select(YEAR, values) %>% 
+  left_join(ameco_long, by = "YEAR") %>% 
+  mutate(VALUE = VALUE * 1000) %>% 
+  mutate(output_gap = 100 * (values - VALUE) / VALUE,
          pct_gdp_growth = (values / dplyr::lag(values, 4) - 1) * 100)
 ```
 
 
 Graphique 
 ```{r}
-ggplot(pib_clean, aes(x = TIME_PERIOD)) +
+ggplot(pib_clean2, aes(x = YEAR)) +
   geom_line(aes(y = values), size = 1) +
-  geom_line(aes(y = potentiel), col = "red", size = 0.5) +
+  geom_line(aes(y = VALUE), col = "red", size = 0.5) +
   labs(
     title = "Évolution du PIB en volume et PIB potentiel",
     x = "Année",
@@ -65,7 +89,7 @@ ggplot(pib_clean, aes(x = TIME_PERIOD)) +
 
 Output gap 
 ```{r}
-ggplot(pib_clean, aes(x = TIME_PERIOD, y = output_gap)) +
+ggplot(pib_clean2, aes(x = YEAR, y = output_gap)) +
   geom_hline(yintercept = 0, col = "red") +
   geom_line() +
   labs(
@@ -82,7 +106,7 @@ ggplot(pib_clean, aes(x = TIME_PERIOD, y = output_gap)) +
 ```
 
 ```{r}
-ggplot(pib_clean %>% filter(format(TIME_PERIOD, "%Y") >= 2015), aes(x = TIME_PERIOD)) +
+ggplot(pib_clean2 %>% filter(YEAR >= 2015), aes(x = YEAR)) +
   
   # Barres Output Gap
   geom_col(aes(y = output_gap, fill = output_gap > 0)) +
