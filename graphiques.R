@@ -2,9 +2,9 @@
 ####    PIB    ########
 #######################
 
-ggplot(pib_clean, aes(x = TIME_PERIOD)) +
+ggplot(pib_clean2, aes(x = YEAR)) +
   geom_line(aes(y = values), size = 1) +
-  geom_line(aes(y = potentiel), col = "red", size = 0.5) +
+  geom_line(aes(y = VALUE), col = "red", size = 0.5) +
   labs(
     title = "Évolution du PIB en volume et PIB potentiel",
     x = "Année",
@@ -17,7 +17,7 @@ ggplot(pib_clean, aes(x = TIME_PERIOD)) +
     panel.grid.minor = element_blank()
   )
 
-ggplot(pib_clean, aes(x = TIME_PERIOD, y = output_gap)) +
+ggplot(pib_clean2, aes(x = YEAR, y = output_gap)) +
   geom_hline(yintercept = 0, col = "red") +
   geom_line() +
   labs(
@@ -32,7 +32,7 @@ ggplot(pib_clean, aes(x = TIME_PERIOD, y = output_gap)) +
     plot.title = element_text(face = "bold")
   )
 
-ggplot(pib_clean %>% filter(format(TIME_PERIOD, "%Y") >= 2015), aes(x = TIME_PERIOD)) +
+ggplot(pib_clean2 %>% filter(YEAR >= 2015), aes(x = YEAR)) +
   
   # Barres Output Gap
   geom_col(aes(y = output_gap, fill = output_gap > 0)) +
